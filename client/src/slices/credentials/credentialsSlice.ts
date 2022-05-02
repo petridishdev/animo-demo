@@ -1,4 +1,5 @@
 import type { CredentialRecord } from '@aries-framework/core'
+import type { SerializedError } from '@reduxjs/toolkit'
 
 import { createSlice } from '@reduxjs/toolkit'
 
@@ -13,13 +14,18 @@ interface CredentialState {
   credentials: CredentialRecord[]
   issuedCredentials: CredentialRecord[]
   isLoading: boolean
+  isIssueCredentialLoading: boolean
+  error: SerializedError | undefined
 }
 
 const initialState: CredentialState = {
   credentials: [],
   issuedCredentials: [],
   isLoading: true,
+  isIssueCredentialLoading: true,
+  error: undefined,
 }
+
 const credentialSlice = createSlice({
   name: 'credentials',
   initialState,
@@ -40,11 +46,15 @@ const credentialSlice = createSlice({
         state.isLoading = false
         state.credentials = action.payload
       })
+      .addCase(issueCredential.rejected, (state, action) => {
+        state.isIssueCredentialLoading = false
+        state.error = action.error
+      })
       .addCase(issueCredential.pending, (state) => {
-        state.isLoading = true
+        state.isIssueCredentialLoading = true
       })
       .addCase(issueCredential.fulfilled, (state, action) => {
-        state.isLoading = false
+        state.isIssueCredentialLoading = false
         state.credentials.push(action.payload)
       })
       .addCase(fetchCredentialById.pending, (state) => {
@@ -55,12 +65,10 @@ const credentialSlice = createSlice({
         const index = state.credentials.findIndex((cred) => cred.id == action.payload.id)
 
         if (index == -1) {
-          // creds doesn't exist, add it
           state.credentials.push(action.payload)
           return state
         }
 
-        // cred does exist, update it
         state.credentials[index] = action.payload
         return state
       })
